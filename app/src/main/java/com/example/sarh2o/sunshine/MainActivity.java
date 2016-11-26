@@ -9,5 +9,25 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (isNeedLoadingFragmentMain(savedInstanceState)) {
+            PlaceholderFragment placeholderFragment = new PlaceholderFragment();
+            placeholderFragment.setArguments(getIntent().getExtras());
+            getSupportFragmentManager().beginTransaction().
+                    add(R.id.fragment_main_view, placeholderFragment).commit();
+        }
+    }
+
+    private boolean isNeedLoadingFragmentMain(Bundle savedInstanceState) {
+        return !isResortedFromPreState(savedInstanceState)
+                && isFragmentMainExisting();
+    }
+
+    private boolean isResortedFromPreState(Bundle savedInstanceState) {
+        return savedInstanceState != null;
+    }
+
+    private boolean isFragmentMainExisting() {
+        return findViewById(R.id.fragment_main_view) != null;
     }
 }
