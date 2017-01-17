@@ -54,9 +54,14 @@ public class ForecastFragment extends Fragment {
     private String mParam2;
 
     private View rootView = null;
+    private ArrayAdapter<String> forecastViewAdapter = null;
+    private ListView listView = null;
+    private List<String> forecastItems = null;
+
 
     public ForecastFragment() {
         // Required empty public constructor
+        int x = 0;
     }
 
     /**
@@ -91,8 +96,18 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         rootView = inflater.inflate(R.layout.forecastfragment, container, false);
-
+        initListView();
         return rootView;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        //forecastViewAdapter.notifyDataSetChanged();
+        if (forecastItems != null) {
+            forecastViewAdapter.clear();
+            forecastViewAdapter.addAll(forecastItems);
+        }
     }
 
     @Override
@@ -103,10 +118,42 @@ public class ForecastFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_refresh) {
-            new FetchWeatherTask().execute("94043");
+        switch (id) {
+            case R.id.action_refresh:
+                new FetchWeatherTask().execute("94043");
+                break;
+            case R.id.action_setting:
+                Intent settingActivityIntent = new Intent(getContext(), SettingsActivity.class);
+                startActivity(settingActivityIntent);
+                break;
+            default:
+                break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void initListView() {
+        listView = (ListView)rootView.findViewById(R.id.listview_forecast);
+        forecastViewAdapter = new ArrayAdapter<>(getActivity(), R.layout.list_item_forecast,
+                R.id.list_item_forecast_textView, new ArrayList<String>());
+        if (listView != null) {
+            listView.setAdapter(forecastViewAdapter);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent,
+                                        View view, int position,
+                                        long id) {
+                    // Toast Example
+                    String text = forecastViewAdapter.getItem(position);
+//                    Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
+                    // Try to use intent
+                    Intent detailActivityIntent = new Intent(getContext(),
+                            DetailActivity.class)
+                            .putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(detailActivityIntent);
+                }
+            });
+        }
     }
 
     private class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
@@ -122,8 +169,6 @@ public class ForecastFragment extends Fragment {
         private String appKey = "466c5bdb77e1ef542d1e83bdce7a2064";
         private int days = 7;
         private String format = "json";
-
-        ArrayAdapter<String> forecastViewAdapter;
 
         @Override
         protected String[] doInBackground (String... params) {
@@ -143,26 +188,9 @@ public class ForecastFragment extends Fragment {
                 Log.w(LOG_TAG, "Didn't get any weather data!");
                 return;
             }
-            List<String> forecastItems = new ArrayList<String>(Arrays.<String>asList(result));
-            forecastViewAdapter =
-                    new ArrayAdapter<>(getActivity(),
-                            R.layout.list_item_forecast,
-                            R.id.list_item_forecast_textView,
-                            forecastItems);
-            ListView listView = (ListView)rootView.findViewById(R.id.listview_forecast);
-            listView.setAdapter(forecastViewAdapter);
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    // Toast Example
-                    String text = forecastViewAdapter.getItem(position);
-//                    Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
-                    // Try to use intent
-                    Intent detailActivityIntent = new Intent(getContext(), DetailActivity.class)
-                            .putExtra(Intent.EXTRA_TEXT, text);
-                    startActivity(detailActivityIntent);
-                }
-            });
+            forecastItems = new ArrayList<String>(Arrays.<String>asList(result));
+            forecastViewAdapter.clear();
+            forecastViewAdapter.addAll(forecastItems);
         }
 
         String[] parseForecastJsonData(String forecastJsonStr) {
@@ -178,7 +206,7 @@ public class ForecastFragment extends Fragment {
                     JSONObject weatherDataPerDay = weatherData.getJSONObject(i);
                     JSONObject tempDataPerDay = weatherDataPerDay.getJSONObject(JSON_KEY_TEMP);
                     long dt = weatherDataPerDay.getLong(JSON_KEY_DATETIME) * 1000;
-                    String result = dtFormater.format(dt).toString();
+                    String result = dtFormater.format(dt);
                     long maxTemp = Math.round(tempDataPerDay.getDouble(JSON_KEY_MAX));
                     long minTemp = Math.round(tempDataPerDay.getDouble(JSON_KEY_MIN));
                     JSONArray weatherList = weatherDataPerDay.getJSONArray(JSON_KEY_WEATHER);
