@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.app.Fragment;
 import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -16,7 +16,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -123,7 +122,7 @@ public class ForecastFragment extends Fragment {
                 new FetchWeatherTask().execute("94043");
                 break;
             case R.id.action_setting:
-                Intent settingActivityIntent = new Intent(getContext(), SettingsActivity.class);
+                Intent settingActivityIntent = new Intent(getActivity(), SettingsActivity.class);
                 startActivity(settingActivityIntent);
                 break;
             default:
@@ -145,9 +144,9 @@ public class ForecastFragment extends Fragment {
                                         long id) {
                     // Toast Example
                     String text = forecastViewAdapter.getItem(position);
-//                    Toast.makeText(getContext(), text, Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getActivity(), text, Toast.LENGTH_SHORT).show();
                     // Try to use intent
-                    Intent detailActivityIntent = new Intent(getContext(),
+                    Intent detailActivityIntent = new Intent(getActivity(),
                             DetailActivity.class)
                             .putExtra(Intent.EXTRA_TEXT, text);
                     startActivity(detailActivityIntent);

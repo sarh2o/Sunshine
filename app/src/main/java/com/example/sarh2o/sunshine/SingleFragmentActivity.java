@@ -1,7 +1,7 @@
 package com.example.sarh2o.sunshine;
 
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import android.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 
 
@@ -27,7 +27,7 @@ public class SingleFragmentActivity extends AppCompatActivity {
         setContentView(layoutId);
         if (isNeedLoadingFragmentMain(savedInstanceState, fragmentId)) {
             fragment.setArguments(getIntent().getExtras());
-            getSupportFragmentManager().beginTransaction().
+            getFragmentManager().beginTransaction().
                     add(fragmentId, fragment).commit();
         }
     }
