@@ -1,10 +1,12 @@
 package com.example.sarh2o.sunshine;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Fragment;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -102,11 +104,6 @@ public class ForecastFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        //forecastViewAdapter.notifyDataSetChanged();
-        if (forecastItems != null) {
-            forecastViewAdapter.clear();
-            forecastViewAdapter.addAll(forecastItems);
-        }
     }
 
     @Override
@@ -119,7 +116,11 @@ public class ForecastFragment extends Fragment {
         int id = item.getItemId();
         switch (id) {
             case R.id.action_refresh:
-                new FetchWeatherTask().execute("94043");
+                SharedPreferences preferences =
+                        PreferenceManager.getDefaultSharedPreferences(getActivity());
+                String postcode = preferences.getString(getString(R.string.pref_location_key),
+                        getString(R.string.pref_location_default));
+                new FetchWeatherTask().execute(postcode);
                 break;
             case R.id.action_setting:
                 Intent settingActivityIntent = new Intent(getActivity(), SettingsActivity.class);

@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -46,8 +47,20 @@ public class DetailActivity extends SingleFragmentActivity {
         }
 
         @Override
+
         public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-            super.onCreateOptionsMenu(menu, inflater);
+            inflater.inflate(R.menu.settingsfragment, menu);
+        }
+        @Override
+        public boolean onOptionsItemSelected(MenuItem item) {
+            int id = item.getItemId();
+            switch (id) {
+                case R.id.action_detail_setting:
+                    Intent settingsActivityIntent =
+                            new Intent(getActivity(), SettingsActivity.class);
+                    startActivity(settingsActivityIntent);
+            }
+            return super.onOptionsItemSelected(item);
         }
     }
 }
