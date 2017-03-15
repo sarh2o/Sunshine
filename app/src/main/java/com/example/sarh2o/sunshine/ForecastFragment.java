@@ -113,23 +113,38 @@ public class ForecastFragment extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        switch (id) {
+        switch (item.getItemId()) {
             case R.id.action_refresh:
-                SharedPreferences preferences =
-                        PreferenceManager.getDefaultSharedPreferences(getActivity());
-                String postcode = preferences.getString(getString(R.string.pref_location_key),
-                        getString(R.string.pref_location_default));
-                new FetchWeatherTask().execute(postcode);
+                updateWeather();
                 break;
             case R.id.action_setting:
-                Intent settingActivityIntent = new Intent(getActivity(), SettingsActivity.class);
-                startActivity(settingActivityIntent);
+                openSettings();
                 break;
             default:
                 break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
+    }
+
+    private void openSettings() {
+        Intent settingActivityIntent = new Intent(getActivity(), SettingsActivity.class);
+        startActivity(settingActivityIntent);
+    }
+
+    private void updateWeather() {
+        SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String postcode = preferences.getString(getString(R.string.pref_location_key),
+                getString(R.string.pref_location_default));
+        String unit = preferences.getString(getString(R.string.pref_units_key),
+                getString(R.string.pref_units_default));
+        new FetchWeatherTask().execute(postcode, unit);
     }
 
     private void initListView() {
@@ -156,6 +171,54 @@ public class ForecastFragment extends Fragment {
         }
     }
 
+    private class WeatherParameters {
+        private String unit = "metric";
+        private String appKey = "466c5bdb77e1ef542d1e83bdce7a2064";
+        private int days = 7;
+        private String format = "json";
+        private String postcode;
+
+        public String getUnit() {
+            return unit;
+        }
+
+        public void setUnit(String unit) {
+            this.unit = unit;
+        }
+
+        public String getAppKey() {
+            return appKey;
+        }
+
+        public void setAppKey(String appKey) {
+            this.appKey = appKey;
+        }
+
+        public int getDays() {
+            return days;
+        }
+
+        public void setDays(int days) {
+            this.days = days;
+        }
+
+        public String getFormat() {
+            return format;
+        }
+
+        public void setFormat(String format) {
+            this.format = format;
+        }
+
+        public String getPostcode() {
+            return postcode;
+        }
+
+        public void setPostcode(String postcode) {
+            this.postcode = postcode;
+        }
+    }
+
     private class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
         private final String JSON_KEY_LIST = "list";
@@ -165,18 +228,21 @@ public class ForecastFragment extends Fragment {
         private final String JSON_KEY_MAX = "max";
         private final String JSON_KEY_MIN = "min";
         private final String JSON_KEY_MAIN = "main";
-        private String unit = "metric";
-        private String appKey = "466c5bdb77e1ef542d1e83bdce7a2064";
-        private int days = 7;
-        private String format = "json";
+        private WeatherParameters weatherParameters;
+
+        public FetchWeatherTask() {
+            weatherParameters = new WeatherParameters();
+        }
 
         @Override
         protected String[] doInBackground (String... params) {
-            return parseForecastJsonData(getForecastJasonData(params[0]));
+            weatherParameters.setPostcode(params[0]);
+            weatherParameters.setUnit(params[1]);
+            return parseForecastJsonData(getForecastJasonData());
         }
 
-        private String getForecastJasonData(String postCode) {
-            HttpGetter httpGetter = new HttpGetter(postCode);
+        private String getForecastJasonData() {
+            HttpGetter httpGetter = new HttpGetter(weatherParameters);
             String forecastJsonData = httpGetter.getData();
             if (forecastJsonData == null) return null;
             return forecastJsonData;
@@ -197,7 +263,7 @@ public class ForecastFragment extends Fragment {
             if (forecastJsonStr.length() == 0) {
                 return null;
             }
-            String[] forecastOfDays = new String[days];
+            String[] forecastOfDays = new String[weatherParameters.getDays()];
             try {
                 JSONObject jsonObjects = new JSONObject(forecastJsonStr);
                 JSONArray weatherData = jsonObjects.getJSONArray(JSON_KEY_LIST);
@@ -207,8 +273,8 @@ public class ForecastFragment extends Fragment {
                     JSONObject tempDataPerDay = weatherDataPerDay.getJSONObject(JSON_KEY_TEMP);
                     long dt = weatherDataPerDay.getLong(JSON_KEY_DATETIME) * 1000;
                     String result = dtFormater.format(dt);
-                    long maxTemp = Math.round(tempDataPerDay.getDouble(JSON_KEY_MAX));
-                    long minTemp = Math.round(tempDataPerDay.getDouble(JSON_KEY_MIN));
+                    long maxTemp = calcTempWithUnit(tempDataPerDay.getDouble(JSON_KEY_MAX));
+                    long minTemp = calcTempWithUnit(tempDataPerDay.getDouble(JSON_KEY_MIN));
                     JSONArray weatherList = weatherDataPerDay.getJSONArray(JSON_KEY_WEATHER);
                     String weatherDescription = "";
                     if (weatherList.length() > 0) {
@@ -225,8 +291,15 @@ public class ForecastFragment extends Fragment {
             return forecastOfDays;
         }
 
+        long calcTempWithUnit(double temp) {
+            if (weatherParameters.getUnit().equals(getString(R.string.pref_units_imperial))) {
+                temp = temp * 1.8 + 32;
+            }
+            return Math.round(temp);
+        }
+
         private class HttpGetter {
-            private String postCode;
+            private WeatherParameters weatherParameters;
 
             private final String FORECAST_BASE_URL = "http://api.openweathermap.org/data/2.5/forecast/daily?";
             private final String POSTCODE_PARAM = "q";
@@ -234,9 +307,10 @@ public class ForecastFragment extends Fragment {
             private final String APP_KEY_PARAM = "APPID";
             private final String DAYS_PARAM = "cnt";
             private final String FORMAT_PARAM = "mode";
+            private final String UNIT_FOR_QUERY = "metric";
 
-            public HttpGetter(String postCode) {
-                this.postCode = postCode;
+            public HttpGetter(WeatherParameters wp) {
+                this.weatherParameters = wp;
             }
 
             public String getData() {
@@ -281,11 +355,12 @@ public class ForecastFragment extends Fragment {
             @NonNull
             private URL buildUrl() throws MalformedURLException {
                 Uri uriBuilder = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(POSTCODE_PARAM, postCode)
-                        .appendQueryParameter(UNIT_PARAM, unit)
-                        .appendQueryParameter(APP_KEY_PARAM, appKey)
-                        .appendQueryParameter(DAYS_PARAM, String.valueOf(days))
-                        .appendQueryParameter(FORMAT_PARAM, format).build();
+                        .appendQueryParameter(POSTCODE_PARAM, weatherParameters.getPostcode())
+                        .appendQueryParameter(UNIT_PARAM, UNIT_FOR_QUERY)
+                        .appendQueryParameter(APP_KEY_PARAM, weatherParameters.getAppKey())
+                        .appendQueryParameter(DAYS_PARAM,
+                                String.valueOf(weatherParameters.getDays()))
+                        .appendQueryParameter(FORMAT_PARAM, weatherParameters.getFormat()).build();
                 return new URL(uriBuilder.toString());
             }
         }
